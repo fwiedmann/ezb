@@ -1,0 +1,1 @@
+https://medium.com/@petomalina/using-go-mod-download-to-speed-up-golang-docker-builds-707591336888
