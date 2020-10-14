@@ -60,3 +60,5 @@ func (m MySqlRepository) Get(ctx context.Context, id entity.ID) (Customer, error
 	c.lastUpdateTimestamp = time.Unix(lastUpdateTimestamp, 0)
 	return c, nil
 }
+
+// c0b87604-2442-4d19-96d8-e44e026d3481

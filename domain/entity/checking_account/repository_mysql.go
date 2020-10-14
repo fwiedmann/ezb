@@ -47,7 +47,7 @@ func (m *MySqlRepository) Get(ctx context.Context, id entity.ID) (CheckingAccoun
 	var creationTimestamp int64
 	var lastUpdateTimestamp int64
 	var ID string
-	err := m.client.QueryRowContext(ctx, `SELECT ezb.checkingAccount.Number, ezb.checkingAccount.Name, ezb.checkingAccount.Balance, ezb.checkingAccount.OverDraftLimit, ezb.customer.CreationTimestamp, ezb.customer.LastUpdateTimestamp FROM ezb.customer WHERE ezb.customer.ID = ?`, id).Scan(&ID, &c.Name, &c.balance, &c.OverDraftLimit, &c.hashedPin, &creationTimestamp, &lastUpdateTimestamp)
+	err := m.client.QueryRowContext(ctx, `SELECT Number, Name, Balance, OverDraftLimit, PinHash, CreationTimestamp,LastUpdateTimestamp FROM ezb.checkingAccount WHERE ezb.checkingAccount.Number = ?`, id).Scan(&ID, &c.Name, &c.balance, &c.OverDraftLimit, &c.hashedPin, &creationTimestamp, &lastUpdateTimestamp)
 	if err != nil {
 		return CheckingAccount{}, err
 	}

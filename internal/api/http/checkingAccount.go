@@ -12,6 +12,8 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/fwiedmann/ezb/domain/entity/checking_account"
+	"github.com/fwiedmann/ezb/domain/usecase/debit"
+	"github.com/fwiedmann/ezb/domain/usecase/deposit"
 )
 
 type CheckingAccount struct {
@@ -22,12 +24,28 @@ type CheckingAccount struct {
 	Pin            string `json:"pin"`
 }
 
-func NewCheckingAccountHandler(m checking_account.Manager) *CheckingAccountHandler {
-	return &CheckingAccountHandler{manager: m}
+type Deposit struct {
+	Pin    string `json:"pin"`
+	Amount string `json:"amount"`
+}
+
+type Debit struct {
+	Pin    string `json:"pin"`
+	Amount string `json:"amount"`
+}
+
+func NewCheckingAccountHandler(m checking_account.Manager, depositUseCase *deposit.UseCase, debitUseCase *debit.UseCase) *CheckingAccountHandler {
+	return &CheckingAccountHandler{
+		manager:        m,
+		depositUseCase: depositUseCase,
+		debitUseCase:   debitUseCase,
+	}
 }
 
 type CheckingAccountHandler struct {
-	manager checking_account.Manager
+	manager        checking_account.Manager
+	depositUseCase *deposit.UseCase
+	debitUseCase   *debit.UseCase
 }
 
 func (c *CheckingAccountHandler) CreateCheckingAccount(w http.ResponseWriter, r *http.Request) {
@@ -170,4 +188,82 @@ func (c *CheckingAccountHandler) GetCheckingAccount(w http.ResponseWriter, r *ht
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+}
+
+func (c *CheckingAccountHandler) Deposit(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, ok := vars["id"]
+	if !ok {
+		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), 422)
+		return
+	}
+
+	parsedNumber, err := uuid.Parse(id)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), 422)
+		return
+	}
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), 422)
+		return
+	}
+
+	var depositRequest Deposit
+	if err := json.Unmarshal(body, &depositRequest); err != nil {
+		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), 422)
+		return
+	}
+
+	parsedAmount, err := strconv.ParseFloat(depositRequest.Amount, 64)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), 422)
+		return
+	}
+
+	if err := c.depositUseCase.Deposit(r.Context(), parsedNumber, parsedAmount, depositRequest.Pin); err != nil {
+		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), 422)
+		return
+	}
+	w.WriteHeader(http.StatusCreated)
+}
+
+func (c *CheckingAccountHandler) Debit(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, ok := vars["id"]
+	if !ok {
+		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), 422)
+		return
+	}
+
+	parsedNumber, err := uuid.Parse(id)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), 422)
+		return
+	}
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), 422)
+		return
+	}
+
+	var debitRequest Debit
+	if err := json.Unmarshal(body, &debitRequest); err != nil {
+		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), 422)
+		return
+	}
+
+	parsedAmount, err := strconv.ParseFloat(debitRequest.Amount, 64)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), 422)
+		return
+	}
+
+	if err := c.debitUseCase.Debit(r.Context(), parsedNumber, parsedAmount, debitRequest.Pin); err != nil {
+		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), 422)
+		return
+	}
+	w.WriteHeader(http.StatusCreated)
 }

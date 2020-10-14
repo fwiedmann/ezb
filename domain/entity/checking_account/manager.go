@@ -10,9 +10,6 @@ import (
 	"github.com/fwiedmann/ezb/domain/entity"
 )
 
-// birthdateLayout represents a birthdate in this format: day-month-year
-const birthdateLayout = "02-01-2006"
-
 var (
 	ErrorEmptyUserInput        = errors.New("user input contains empty fields")
 	ErrorInvalidOverdraftLimit = errors.New("overdraft limit has to be a negative number")
