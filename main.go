@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"log"
+	"os"
 
 	"github.com/fwiedmann/ezb/domain/entity/customer_checking_account_mapping"
 	"github.com/fwiedmann/ezb/domain/usecase/assign_customer_to_checking_account"
@@ -24,7 +25,12 @@ import (
 import _ "github.com/go-sql-driver/mysql"
 
 func main() {
-	db, err := sql.Open("mysql", "root:secureByDefault@(127.0.0.1:3306)/ezb")
+	dbConnection := os.Getenv("EZB_MYSQL_CONNECTION_STRING")
+	if dbConnection == "" {
+		log.Fatal("required environment variable \"EZB_MYSQL_CONNECTION_STRING\" is not set or empty")
+	}
+
+	db, err := sql.Open("mysql", dbConnection)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -58,12 +64,12 @@ func main() {
 
 	router := mux.NewRouter()
 	router.NewRoute().Path("/customer").HandlerFunc(ch.CreateCustomer).Methods("POST")
-	router.NewRoute().Path("/customer/{id}/").HandlerFunc(ch.UpdateCustomer).Methods("PUT")
-	router.NewRoute().Path("/customer/{id}/").HandlerFunc(ch.GetCustomer).Methods("GET")
+	router.NewRoute().Path("/customer/{id}").HandlerFunc(ch.UpdateCustomer).Methods("PUT")
+	router.NewRoute().Path("/customer/{id}").HandlerFunc(ch.GetCustomer).Methods("GET")
 
 	router.NewRoute().Path("/checking-account").HandlerFunc(ca.CreateCheckingAccount).Methods("POST")
-	router.NewRoute().Path("/checking-account/{id}/").HandlerFunc(ca.UpdateCheckingAccount).Methods("PUT")
-	router.NewRoute().Path("/checking-account/{id}/").HandlerFunc(ca.GetCheckingAccount).Methods("GET")
+	router.NewRoute().Path("/checking-account/{id}").HandlerFunc(ca.UpdateCheckingAccount).Methods("PUT")
+	router.NewRoute().Path("/checking-account/{id}").HandlerFunc(ca.GetCheckingAccount).Methods("GET")
 	router.NewRoute().Path("/checking-account/{id}/deposit").HandlerFunc(ca.Deposit).Methods("POST")
 	router.NewRoute().Path("/checking-account/{id}/debit").HandlerFunc(ca.Debit).Methods("POST")
 

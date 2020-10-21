@@ -1,0 +1,23 @@
+version: "3"
+services:
+  database:
+    container_name: database
+    hostname: database
+    image: mysql:8.0.14
+    restart: always
+    ports:
+      - 3306:3306
+    env_file:
+      - ".env"
+    volumes:
+      - "./database-data:/var/lib/mysql"
+  ezb:
+    build:
+      context: ..
+    env_file:
+      - .env
+    depends_on:
+      - database
+    restart: always
+    ports:
+    - "8080:8080"

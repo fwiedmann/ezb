@@ -28,7 +28,7 @@ func NewMySqlRepository(client *sql.DB) (*MySqlRepository, error) {
 }
 
 func (m MySqlRepository) Create(ctx context.Context, c Customer) error {
-	_, err := m.client.ExecContext(ctx, `INSERT INTO ezb.customer (ID, FirstName, LastName, Birthdate, Gender, PinHash, CreationTimestamp, LastUpdateTimestamp) VALUES (?, ?, ?, ?, ?, ?, ?)`, c.ID.String(), c.FirstName, c.LastName, c.Birthdate, c.Gender, c.creationTimestamp.Unix(), c.lastUpdateTimestamp.Unix())
+	_, err := m.client.ExecContext(ctx, `INSERT INTO ezb.customer (ID, FirstName, LastName, Birthdate, Gender, CreationTimestamp, LastUpdateTimestamp) VALUES (?, ?, ?, ?, ?, ?, ?)`, c.ID.String(), c.FirstName, c.LastName, c.Birthdate, c.Gender, c.creationTimestamp.Unix(), c.lastUpdateTimestamp.Unix())
 	if err != nil {
 		return err
 	}
