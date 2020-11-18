@@ -15,15 +15,11 @@ type Mapping struct {
 	CheckingAccountNumber string `json:"checking_account_number"`
 }
 
-func NewCustomerCheckingAccountMapper(mapper *assign_customer_to_checking_account.UseCase) *CustomerCheckingAccountMapper {
-	return &CustomerCheckingAccountMapper{mapper: mapper}
-}
-
-type CustomerCheckingAccountMapper struct {
+type customerCheckingAccountMapper struct {
 	mapper *assign_customer_to_checking_account.UseCase
 }
 
-func (cma *CustomerCheckingAccountMapper) CreateMapping(w http.ResponseWriter, r *http.Request) {
+func (cma *customerCheckingAccountMapper) CreateMapping(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), 422)

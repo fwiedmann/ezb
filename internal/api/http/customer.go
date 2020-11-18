@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/fwiedmann/ezb/domain/usecase/customer_management"
+
 	"github.com/google/uuid"
 
 	"github.com/gorilla/mux"
@@ -21,15 +23,11 @@ type Customer struct {
 	Birthdate string `json:"birthdate"`
 }
 
-func NewCustomerHandler(m customer.Manager) *CustomerHandler {
-	return &CustomerHandler{manager: m}
+type customerHandler struct {
+	manager *customer_management.UseCase
 }
 
-type CustomerHandler struct {
-	manager customer.Manager
-}
-
-func (c *CustomerHandler) CreateCustomer(w http.ResponseWriter, r *http.Request) {
+func (c *customerHandler) CreateCustomer(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), 422)
@@ -68,7 +66,7 @@ func (c *CustomerHandler) CreateCustomer(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusCreated)
 }
 
-func (c *CustomerHandler) UpdateCustomer(w http.ResponseWriter, r *http.Request) {
+func (c *customerHandler) UpdateCustomer(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
@@ -120,7 +118,7 @@ func (c *CustomerHandler) UpdateCustomer(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusOK)
 }
 
-func (c *CustomerHandler) GetCustomer(w http.ResponseWriter, r *http.Request) {
+func (c *customerHandler) GetCustomer(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {

@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/fwiedmann/ezb/domain/usecase/checking_account_management"
+
 	"github.com/google/uuid"
 
 	"github.com/gorilla/mux"
@@ -34,21 +36,13 @@ type Debit struct {
 	Amount string `json:"amount"`
 }
 
-func NewCheckingAccountHandler(m checking_account.Manager, depositUseCase *deposit.UseCase, debitUseCase *debit.UseCase) *CheckingAccountHandler {
-	return &CheckingAccountHandler{
-		manager:        m,
-		depositUseCase: depositUseCase,
-		debitUseCase:   debitUseCase,
-	}
-}
-
-type CheckingAccountHandler struct {
-	manager        checking_account.Manager
+type checkingAccountHandler struct {
+	manager        *checking_account_management.UseCase
 	depositUseCase *deposit.UseCase
 	debitUseCase   *debit.UseCase
 }
 
-func (c *CheckingAccountHandler) CreateCheckingAccount(w http.ResponseWriter, r *http.Request) {
+func (c *checkingAccountHandler) CreateCheckingAccount(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), 422)
@@ -94,7 +88,7 @@ func (c *CheckingAccountHandler) CreateCheckingAccount(w http.ResponseWriter, r 
 	w.WriteHeader(http.StatusCreated)
 }
 
-func (c *CheckingAccountHandler) UpdateCheckingAccount(w http.ResponseWriter, r *http.Request) {
+func (c *checkingAccountHandler) UpdateCheckingAccount(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
@@ -150,7 +144,7 @@ func (c *CheckingAccountHandler) UpdateCheckingAccount(w http.ResponseWriter, r 
 	w.WriteHeader(http.StatusOK)
 }
 
-func (c *CheckingAccountHandler) GetCheckingAccount(w http.ResponseWriter, r *http.Request) {
+func (c *checkingAccountHandler) GetCheckingAccount(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
@@ -190,7 +184,7 @@ func (c *CheckingAccountHandler) GetCheckingAccount(w http.ResponseWriter, r *ht
 	w.WriteHeader(http.StatusOK)
 }
 
-func (c *CheckingAccountHandler) Deposit(w http.ResponseWriter, r *http.Request) {
+func (c *checkingAccountHandler) Deposit(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {
@@ -229,7 +223,7 @@ func (c *CheckingAccountHandler) Deposit(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusCreated)
 }
 
-func (c *CheckingAccountHandler) Debit(w http.ResponseWriter, r *http.Request) {
+func (c *checkingAccountHandler) Debit(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 	if !ok {

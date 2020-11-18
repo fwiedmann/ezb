@@ -4,9 +4,18 @@ import (
 	"database/sql"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
+
+	"github.com/fwiedmann/ezb/domain/usecase/assign_customer_to_checking_account"
+
+	"github.com/fwiedmann/ezb/internal/api/http"
+
+	"github.com/fwiedmann/ezb/domain/usecase/checking_account_management"
+
+	"github.com/fwiedmann/ezb/domain/usecase/customer_management"
 
 	"github.com/fwiedmann/ezb/domain/entity/customer_checking_account_mapping"
-	"github.com/fwiedmann/ezb/domain/usecase/assign_customer_to_checking_account"
 
 	"github.com/fwiedmann/ezb/domain/usecase/debit"
 
@@ -14,15 +23,10 @@ import (
 
 	"github.com/fwiedmann/ezb/domain/entity/checking_account"
 
-	"github.com/fwiedmann/ezb/internal/api/http"
-
-	"github.com/gorilla/mux"
-
-	gohttp "net/http"
-
 	"github.com/fwiedmann/ezb/domain/entity/customer"
+
+	_ "github.com/go-sql-driver/mysql"
 )
-import _ "github.com/go-sql-driver/mysql"
 
 func main() {
 	dbConnection := os.Getenv("EZB_MYSQL_CONNECTION_STRING")
@@ -40,40 +44,46 @@ func main() {
 		log.Fatal(err)
 	}
 
-	customerManager := customer.NewManager(customerRepo)
+	customerManager := customer_management.NewUseCase(customer.NewManager(customerRepo))
 
 	checkinAccountRepo, err := checking_account.NewMySqlRepository(db)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	checkinAccountRepoManager := checking_account.NewManager(checkinAccountRepo)
+	checkinAccountRepoManager := checking_account_management.NewUseCase(checking_account.NewManager(checkinAccountRepo))
 
 	depositUseCase := deposit.NewUseCase(checkinAccountRepoManager)
 	debitUseCase := debit.NewUseCase(checkinAccountRepoManager)
-
-	ch := http.NewCustomerHandler(customerManager)
-	ca := http.NewCheckingAccountHandler(checkinAccountRepoManager, depositUseCase, debitUseCase)
 
 	mapperRepo, err := customer_checking_account_mapping.NewMySqlRepository(db)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	mapperHandler := http.NewCustomerCheckingAccountMapper(assign_customer_to_checking_account.NewUseCase(customer_checking_account_mapping.NewManager(mapperRepo)))
+	mapperUseCase := assign_customer_to_checking_account.NewUseCase(customer_checking_account_mapping.NewManager(mapperRepo))
 
-	router := mux.NewRouter()
-	router.NewRoute().Path("/customer").HandlerFunc(ch.CreateCustomer).Methods("POST")
-	router.NewRoute().Path("/customer/{id}").HandlerFunc(ch.UpdateCustomer).Methods("PUT")
-	router.NewRoute().Path("/customer/{id}").HandlerFunc(ch.GetCustomer).Methods("GET")
+	r := http.Router{
+		CustomerManager:        customerManager,
+		CheckingAccountManager: checkinAccountRepoManager,
+		Debit:                  debitUseCase,
+		Deposit:                depositUseCase,
+		Mapper:                 mapperUseCase,
+		Port:                   8080,
+	}
+	stopChan := make(chan struct{})
+	httpRouterErrChan := make(chan error)
+	go r.StartRouter(stopChan, httpRouterErrChan)
+	select {
+	case <-initOSNotifyChan():
+		stopChan <- struct{}{}
+	case err := <-httpRouterErrChan:
+		panic(err)
+	}
+}
 
-	router.NewRoute().Path("/checking-account").HandlerFunc(ca.CreateCheckingAccount).Methods("POST")
-	router.NewRoute().Path("/checking-account/{id}").HandlerFunc(ca.UpdateCheckingAccount).Methods("PUT")
-	router.NewRoute().Path("/checking-account/{id}").HandlerFunc(ca.GetCheckingAccount).Methods("GET")
-	router.NewRoute().Path("/checking-account/{id}/deposit").HandlerFunc(ca.Deposit).Methods("POST")
-	router.NewRoute().Path("/checking-account/{id}/debit").HandlerFunc(ca.Debit).Methods("POST")
-
-	mapperRoutePost := router.NewRoute()
-	mapperRoutePost.Path("/customer-checking-account-mapping").HandlerFunc(mapperHandler.CreateMapping).Methods("POST")
-	panic(gohttp.ListenAndServe(":8080", router))
+func initOSNotifyChan() <-chan os.Signal {
+	notifyChan := make(chan os.Signal, 3)
+	signal.Notify(notifyChan, syscall.SIGTERM, syscall.SIGINT)
+	return notifyChan
 }
